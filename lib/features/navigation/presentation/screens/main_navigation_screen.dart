@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../features/shared_space/presentation/screens/modern_aura_widget_screen.dart';
+import '../../../../features/shared_space/presentation/screens/recent_activity_screen.dart';
 import 'mood_compass_screen.dart';
 import 'partner_connection_screen.dart';
 import 'profile_screen.dart';
 import '../../../../shared/providers/auth_provider.dart';
 import '../../../../shared/providers/mood_compass_provider.dart';
+import '../../../../shared/providers/activity_provider.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/modern_components.dart';
 
@@ -200,10 +202,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       case 0:
         return const ModernAuraWidgetScreen();
       case 1:
-        return const MoodCompassScreen();
+        return const RecentActivityScreen();
       case 2:
-        return const PartnerConnectionScreen();
+        return const MoodCompassScreen();
       case 3:
+        return const PartnerConnectionScreen();
+      case 4:
         return const ProfileScreen();
       default:
         return const ModernAuraWidgetScreen();
@@ -211,72 +215,88 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   }
 
   Widget _buildBottomNavigation(AuraTheme theme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.1 * 255).toInt()),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+    return Consumer<ActivityProvider>(
+      builder: (context, activityProvider, child) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _onTabTapped,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            child: BottomNavigationBar(
+              currentIndex: _currentIndex,
+              onTap: _onTabTapped,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedItemColor: Theme.of(context).colorScheme.primary,
+              unselectedItemColor: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+              selectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 11,
+              ),
+              items: [
+                BottomNavigationBarItem(
+                  icon: _buildNavIcon(Icons.radio_button_checked, 0),
+                  activeIcon: _buildNavIcon(Icons.radio_button_checked, 0, isActive: true),
+                  label: 'Aura',
+                ),
+                BottomNavigationBarItem(
+                  icon: _buildNavIconWithBadge(
+                    Icons.timeline_outlined,
+                    1,
+                    activityProvider.unreadCount,
+                  ),
+                  activeIcon: _buildNavIconWithBadge(
+                    Icons.timeline,
+                    1,
+                    activityProvider.unreadCount,
+                    isActive: true,
+                  ),
+                  label: 'Actividad',
+                ),
+                BottomNavigationBarItem(
+                  icon: _buildNavIcon(Icons.explore_outlined, 2),
+                  activeIcon: _buildNavIcon(Icons.explore, 2, isActive: true),
+                  label: 'Brújula',
+                ),
+                BottomNavigationBarItem(
+                  icon: _buildNavIcon(Icons.people_outline, 3),
+                  activeIcon: _buildNavIcon(Icons.people, 3, isActive: true),
+                  label: 'Conexión',
+                ),
+                BottomNavigationBarItem(
+                  icon: _buildNavIcon(Icons.person_outline, 4),
+                  activeIcon: _buildNavIcon(Icons.person, 4, isActive: true),
+                  label: 'Perfil',
+                ),
+              ],
+            ),
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 11,
-          ),
-          items: [
-            BottomNavigationBarItem(
-              icon: _buildNavIcon(Icons.radio_button_checked, 0),
-              activeIcon: _buildNavIcon(Icons.radio_button_checked, 0, isActive: true),
-              label: 'Aura',
-            ),
-            BottomNavigationBarItem(
-              icon: _buildNavIcon(Icons.explore_outlined, 1),
-              activeIcon: _buildNavIcon(Icons.explore, 1, isActive: true),
-              label: 'Brújula',
-            ),
-            BottomNavigationBarItem(
-              icon: _buildNavIcon(Icons.people_outline, 2),
-              activeIcon: _buildNavIcon(Icons.people, 2, isActive: true),
-              label: 'Conexión',
-            ),
-            BottomNavigationBarItem(
-              icon: _buildNavIcon(Icons.person_outline, 3),
-              activeIcon: _buildNavIcon(Icons.person, 3, isActive: true),
-              label: 'Perfil',
-            ),
-          ],
-        ),
-      ),
+        );
+      }
     );
   }
 
   Widget _buildNavIcon(IconData icon, int index, {bool isActive = false}) {
-    final theme = Theme.of(context);
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(8),
@@ -290,6 +310,39 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         icon,
         size: 24,
       ),
+    );
+  }
+
+  Widget _buildNavIconWithBadge(IconData icon, int index, int badgeCount, {bool isActive = false}) {
+    return Stack(
+      children: [
+        _buildNavIcon(icon, index, isActive: isActive),
+        if (badgeCount > 0)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                badgeCount > 99 ? '99+' : badgeCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

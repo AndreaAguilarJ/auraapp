@@ -119,6 +119,70 @@ class MoodSnapshot extends Equatable {
     return (1.0 - (minutes / 15.0) * 0.5).clamp(0.0, 1.0);
   }
 
+  /// Convierte a formato específico para la colección Mood_Snapshots en Appwrite
+  Map<String, dynamic> toAppwriteData() {
+    // Convertir energyLevel y positivityLevel a un string "mood"
+    final String moodString = "${positivityLevel.toStringAsFixed(0)},${energyLevel.toStringAsFixed(0)}";
+
+    // Determinar el nivel de privacidad basado en los flags de compartición
+    String privacyLevel = "private";
+    if (shareStatus && shareMood && shareContextNote) {
+      privacyLevel = "full";
+    } else if (shareStatus && shareMood) {
+      privacyLevel = "mood_and_status";
+    } else if (shareStatus) {
+      privacyLevel = "status_only";
+    }
+
+    return {
+      'userId': userId,
+      'status': status.value,
+      'mood': moodString,
+      'contextNote': contextNote,
+      'privacyLevel': privacyLevel,
+      'timestamp': timestamp.toIso8601String(),
+      'isManualUpdate': true, // valor por defecto
+      'confidenceScore': 1.0, // valor por defecto
+    };
+  }
+
+  /// Crea desde datos de Appwrite para la colección Mood_Snapshots
+  factory MoodSnapshot.fromAppwriteData(Map<String, dynamic> data) {
+    // Extraer valores de energía y positividad del campo mood
+    double energy = 0.0;
+    double positivity = 0.0;
+    if (data['mood'] != null && data['mood'] is String) {
+      final parts = (data['mood'] as String).split(',');
+      if (parts.length == 2) {
+        try {
+          positivity = double.parse(parts[0]);
+          energy = double.parse(parts[1]);
+        } catch (_) {}
+      }
+    }
+
+    // Determinar los flags de compartición basados en privacyLevel
+    final privacyLevel = data['privacyLevel'] as String? ?? 'private';
+    final shareStatus = privacyLevel != 'private';
+    final shareMood = privacyLevel == 'full' || privacyLevel == 'mood_and_status';
+    final shareContextNote = privacyLevel == 'full';
+
+    return MoodSnapshot(
+      id: data['\$id'] ?? data['id'] ?? '',
+      userId: data['userId'] ?? '',
+      status: UserStatus.fromString(data['status'] ?? 'available'),
+      energyLevel: energy,
+      positivityLevel: positivity,
+      contextNote: data['contextNote'] ?? '',
+      timestamp: data['timestamp'] != null
+          ? DateTime.parse(data['timestamp'])
+          : DateTime.now(),
+      shareStatus: shareStatus,
+      shareMood: shareMood,
+      shareContextNote: shareContextNote,
+    );
+  }
+
   @override
   List<Object?> get props => [
     id,

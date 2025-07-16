@@ -99,6 +99,23 @@ class ThoughtPulse extends Equatable {
     );
   }
 
+  /// Convierte desde datos de Appwrite (alias para fromMap)
+  factory ThoughtPulse.fromAppwriteData(Map<String, dynamic> data) {
+    return ThoughtPulse(
+      id: data['\$id'] ?? data['id'] ?? '',
+      fromUserId: data['fromUserId'] ?? data['from_user_id'] ?? '',
+      toUserId: data['toUserId'] ?? data['to_user_id'] ?? '',
+      relationshipId: data['relationshipId'] ?? data['relationship_id'] ?? '',
+      timestamp: data['timestamp'] != null
+          ? DateTime.parse(data['timestamp'])
+          : DateTime.now(),
+      type: ThoughtPulseType.fromString(data['type'] ?? 'basic'),
+      message: data['message'],
+      isRead: data['isRead'] ?? data['is_read'] ?? false,
+      isReceived: data['isReceived'] ?? data['is_received'] ?? false,
+    );
+  }
+
   /// Convierte a Map para Appwrite
   Map<String, dynamic> toMap() {
     return {
@@ -112,8 +129,19 @@ class ThoughtPulse extends Equatable {
     };
   }
 
-  /// Alias para toMap() que mantiene la consistencia con otros modelos
-  Map<String, dynamic> toAppwriteData() => toMap();
+  /// Convierte a Map para Appwrite
+  Map<String, dynamic> toAppwriteData() {
+    return {
+      'fromUserId': fromUserId,
+      'toUserId': toUserId,
+      'relationshipId': relationshipId,
+      'timestamp': timestamp.toIso8601String(),
+      'type': type.toStorageString(),
+      'message': message,
+      'isRead': isRead,
+      'isReceived': isReceived,
+    };
+  }
 
   /// Determina si el pulso es reciente (últimos 5 minutos)
   bool get isRecent {

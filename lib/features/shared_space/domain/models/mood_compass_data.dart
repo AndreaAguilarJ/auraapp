@@ -12,6 +12,7 @@ class MoodCompassData {
   final DateTime lastUpdated;
   final bool isManualUpdate;
   final double confidenceScore;
+  final String privacyLevel; // Añadiendo el campo requerido privacyLevel
 
   const MoodCompassData({
     required this.id,
@@ -22,36 +23,97 @@ class MoodCompassData {
     required this.lastUpdated,
     this.isManualUpdate = true,
     this.confidenceScore = 1.0,
+    this.privacyLevel = 'shared', // Valor por defecto 'shared' (compartido con la pareja)
   });
 
   /// Crea desde un documento de Appwrite
   factory MoodCompassData.fromAppwriteDocument(models.Document doc) {
+    // Convertir el formato "valencia,energía" a MoodCoordinates
+    MoodCoordinates moodFromString(String moodStr) {
+      final parts = moodStr.split(',');
+      if (parts.length == 2) {
+        try {
+          final positivity = double.parse(parts[0]);
+          final energy = double.parse(parts[1]);
+          return MoodCoordinates(positivity: positivity, energy: energy);
+        } catch (e) {
+          print('Error parsing mood coordinates: $e');
+        }
+      }
+      return const MoodCoordinates(positivity: 0.0, energy: 0.0);
+    }
+
     return MoodCompassData(
       id: doc.$id,
       userId: doc.data['userId'] ?? '',
       status: UserStatus.fromString(doc.data['status'] ?? 'available'),
-      mood: MoodCoordinates.fromMap(
-        Map<String, dynamic>.from(doc.data['mood'] ?? {}),
-      ),
+      // Manejar mood como string o como mapa
+      mood: doc.data['mood'] is String
+          ? moodFromString(doc.data['mood'])
+          : MoodCoordinates.fromMap(
+              Map<String, dynamic>.from(doc.data['mood'] ?? {}),
+            ),
       contextNote: doc.data['contextNote'] ?? '',
       lastUpdated: DateTime.parse(
-        doc.data['lastUpdated'] ?? DateTime.now().toIso8601String(),
+        doc.data['timestamp'] ?? DateTime.now().toIso8601String(), // Usar timestamp en lugar de lastUpdated
       ),
       isManualUpdate: doc.data['isManualUpdate'] ?? true,
       confidenceScore: (doc.data['confidenceScore'] as num?)?.toDouble() ?? 1.0,
+      privacyLevel: doc.data['privacyLevel'] ?? 'shared',
+    );
+  }
+
+  /// Crea desde datos genéricos de Appwrite (para eventos de tiempo real)
+  factory MoodCompassData.fromAppwriteData(Map<String, dynamic> data) {
+    // Convertir el formato "valencia,energía" a MoodCoordinates
+    MoodCoordinates moodFromString(String moodStr) {
+      final parts = moodStr.split(',');
+      if (parts.length == 2) {
+        try {
+          final positivity = double.parse(parts[0]);
+          final energy = double.parse(parts[1]);
+          return MoodCoordinates(positivity: positivity, energy: energy);
+        } catch (e) {
+          print('Error parsing mood coordinates: $e');
+        }
+      }
+      return const MoodCoordinates(positivity: 0.0, energy: 0.0);
+    }
+
+    return MoodCompassData(
+      id: data['\$id'] ?? data['id'] ?? '',
+      userId: data['userId'] ?? '',
+      status: UserStatus.fromString(data['status'] ?? 'available'),
+      // Manejar mood como string o como mapa
+      mood: data['mood'] is String
+          ? moodFromString(data['mood'])
+          : MoodCoordinates.fromMap(
+              Map<String, dynamic>.from(data['mood'] ?? {}),
+            ),
+      contextNote: data['contextNote'] ?? '',
+      lastUpdated: data['timestamp'] != null
+          ? DateTime.parse(data['timestamp'])
+          : DateTime.now(),
+      isManualUpdate: data['isManualUpdate'] ?? true,
+      confidenceScore: (data['confidenceScore'] as num?)?.toDouble() ?? 1.0,
+      privacyLevel: data['privacyLevel'] ?? 'shared',
     );
   }
 
   /// Convierte a formato para Appwrite
   Map<String, dynamic> toAppwriteData() {
+    // Convertir las coordenadas del estado de ánimo al formato "valencia,energía" requerido
+    final String moodString = "${mood.positivity.toStringAsFixed(0)},${mood.energy.toStringAsFixed(0)}";
+
     return {
       'userId': userId,
       'status': status.value,
-      'mood': mood.toMap(),
+      'mood': moodString, // Formato simple: "80,60"
       'contextNote': contextNote,
-      'lastUpdated': lastUpdated.toIso8601String(),
+      'timestamp': lastUpdated.toIso8601String(),
       'isManualUpdate': isManualUpdate,
       'confidenceScore': confidenceScore,
+      'privacyLevel': privacyLevel,
     };
   }
 
@@ -90,6 +152,7 @@ class MoodCompassData {
     DateTime? lastUpdated,
     bool? isManualUpdate,
     double? confidenceScore,
+    String? privacyLevel,
   }) {
     return MoodCompassData(
       id: id ?? this.id,
@@ -100,6 +163,7 @@ class MoodCompassData {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isManualUpdate: isManualUpdate ?? this.isManualUpdate,
       confidenceScore: confidenceScore ?? this.confidenceScore,
+      privacyLevel: privacyLevel ?? this.privacyLevel,
     );
   }
 

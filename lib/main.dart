@@ -4,9 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/services/appwrite_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/realtime_sync_service.dart';
 import 'shared/providers/app_provider.dart';
 import 'shared/providers/auth_provider.dart';
 import 'shared/providers/mood_compass_provider.dart';
+import 'shared/providers/activity_provider.dart';
 import 'shared/theme/app_theme.dart';
 import 'features/auth/presentation/screens/auth_screen.dart';
 import 'features/navigation/presentation/screens/main_navigation_screen.dart';
@@ -20,7 +22,8 @@ void main() async {
   // Inicializar servicios
   await AppwriteService.instance.initialize();
   await NotificationService.instance.initialize();
-  
+  await RealtimeSyncService.instance.initialize();
+
   runApp(const AuraApp());
 }
 
@@ -35,6 +38,7 @@ class AuraApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (context) => AuthProvider()..initialize(),
         ),
+        ChangeNotifierProvider(create: (context) => ActivityProvider()),
         ChangeNotifierProvider(
           create: (context) => MoodCompassProvider()..initialize(),
         ),

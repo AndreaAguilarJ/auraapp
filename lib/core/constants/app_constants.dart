@@ -30,9 +30,10 @@ class AppwriteConstants {
   static const String databaseId = 'aura-main-db';
   static const String usersCollectionId = 'users';
   static const String partnershipsCollectionId = 'partnerships';
-  static const String moodEntriesCollectionId = 'mood_entries';
   static const String messagesCollectionId = 'messages';
   static const String thoughtPulsesCollectionId = 'thought_pulses';
+  static const String moodCollectionId = 'Mood_Snapshots';
+  static const String activitiesCollectionId = 'activities'; // Nueva colección agregada
 
   // IDs de buckets de storage
   static const String profilePhotosBucketId = 'profile-photos';

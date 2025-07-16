@@ -442,7 +442,7 @@ class _AuraWidgetScreenState extends State<AuraWidgetScreen>
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
-                color: Colors.pinkAccent,
+                color: AppColors.primaryAmber,
                 shape: BoxShape.circle,
               ),
             ),

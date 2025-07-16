@@ -32,8 +32,8 @@ class AuraTheme {
   ];
 
   static const List<Color> intimacyGradient = [
-    Color(0xFFFF6B9D),
-    Color(0xFFC44569),
+    Color(0xFF06B6D4), // Teal
+    Color(0xFF0A8A9E), // Teal oscuro
   ];
 
   static const List<Color> serenityGradient = [
@@ -50,12 +50,12 @@ class AuraTheme {
 
   static ThemeData get lightTheme {
     const ColorScheme lightColorScheme = ColorScheme.light(
-      primary: _primaryPurple,
+      primary: _primaryTeal,
       onPrimary: Colors.white,
       primaryContainer: Color(0xFFE4D4F4),
       onPrimaryContainer: Color(0xFF2A0845),
 
-      secondary: _primaryRose,
+      secondary: _accentAmber,
       onSecondary: Colors.white,
       secondaryContainer: Color(0xFFFFD9E2),
       onSecondaryContainer: Color(0xFF3E0A16),
@@ -178,12 +178,12 @@ class AuraTheme {
 
   static ThemeData get darkTheme {
     const ColorScheme darkColorScheme = ColorScheme.dark(
-      primary: Color(0xFF9A7CFA),
+      primary: Color(0xFF54D1DB),
       onPrimary: Color(0xFF2A0845),
       primaryContainer: Color(0xFF3F1A78),
       onPrimaryContainer: Color(0xFFE4D4F4),
 
-      secondary: Color(0xFFFF8FB3),
+      secondary: Color(0xFFFFC96F),
       onSecondary: Color(0xFF3E0A16),
       secondaryContainer: Color(0xFF5C1429),
       onSecondaryContainer: Color(0xFFFFD9E2),
