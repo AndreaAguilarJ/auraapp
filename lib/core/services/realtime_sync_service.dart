@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:appwrite/appwrite.dart';
 import 'dart:async';
+import 'dart:convert';
 
 import '../constants/app_constants.dart';
 import 'appwrite_service.dart';
@@ -212,22 +213,44 @@ class RealtimeSyncService {
 
         final payload = message.payload;
         if (payload is Map<String, dynamic>) {
+          // Procesar el campo metadata si es una cadena JSON
+          Map<String, dynamic>? metadataMap;
+          if (payload['metadata'] is String) {
+            try {
+              // Intentar convertir la cadena JSON de vuelta a un mapa
+              final metadataStr = payload['metadata'] as String;
+              if (metadataStr.isNotEmpty && metadataStr != '{}') {
+                metadataMap = json.decode(metadataStr) as Map<String, dynamic>;
+                print('ℹ️ Campo metadata convertido de JSON string a Map');
+              } else {
+                metadataMap = {};
+              }
+            } catch (e) {
+              print('⚠️ Error al convertir metadata de JSON a Map: $e');
+              metadataMap = {};
+            }
+          } else {
+            metadataMap = payload['metadata'] as Map<String, dynamic>?;
+          }
+
           // Crear ActivityItem desde el payload con todos los campos requeridos
           final activity = ActivityItem(
             id: payload['\$id'] ?? '',
             userId: payload['userId'] ?? '',
-            userName: payload['userName'] ?? 'Usuario', // Campo requerido agregado
+            userName: payload['userName'] ?? 'Usuario',
             partnerId: payload['partnerId'],
             type: ActivityType.values.firstWhere(
               (e) => e.toString().split('.').last == (payload['type'] ?? 'other'),
               orElse: () => ActivityType.other,
             ),
-            title: payload['title'] ?? 'Actividad', // Campo requerido agregado
+            title: payload['title'] ?? 'Actividad',
             description: payload['description'] ?? '',
             timestamp: DateTime.tryParse(payload['timestamp'] ?? '') ?? DateTime.now(),
-            metadata: payload['metadata'],
+            metadata: metadataMap,
             isRead: payload['isRead'] ?? false,
           );
+
+          print('✅ Actividad recibida y procesada correctamente: ${activity.title}');
           _activityController.add(activity);
         }
       }
@@ -251,27 +274,90 @@ class RealtimeSyncService {
     int limit = 50,
   }) async {
     try {
-      // Consultar actividades del usuario y su pareja
+      // Registros de depuración para verificar IDs
+      print('📊 Consultando actividades con:');
+      print('   - userId: $userId${userId.isEmpty ? " ⚠️ VACÍO" : ""}');
+      print('   - partnerId: $partnerId${partnerId == null || partnerId.isEmpty ? " ⚠️ VACÍO/NULO" : ""}');
+
+      if (userId.isEmpty) {
+        print('⚠️ ADVERTENCIA: userId está vacío, esto causará problemas en la consulta');
+        return [];
+      }
+
+      // Primero, intentemos obtener TODAS las actividades para ver qué hay en la base de datos
+      print('🔍 Consultando TODAS las actividades en la colección para depuración...');
+      final allActivitiesResponse = await _appwriteService.databases.listDocuments(
+        databaseId: AppwriteConstants.databaseId,
+        collectionId: AppwriteConstants.activitiesCollectionId,
+        queries: [
+          Query.limit(10), // Solo las primeras 10 para depuración
+        ],
+      );
+
+      print('📋 Total de documentos en la colección activities: ${allActivitiesResponse.total}');
+      if (allActivitiesResponse.documents.isNotEmpty) {
+        print('📋 Ejemplos de documentos encontrados:');
+        for (int i = 0; i < allActivitiesResponse.documents.length && i < 3; i++) {
+          final doc = allActivitiesResponse.documents[i];
+          print('   - Doc ${i + 1}: userId=${doc.data['userId']}, title="${doc.data['title']}", timestamp=${doc.data['timestamp']}');
+        }
+      } else {
+        print('📋 No hay documentos en la colección activities');
+      }
+
+      // Ahora hacer la consulta específica para el usuario
       final queries = [
         Query.or([
           Query.equal('userId', userId),
-          if (partnerId != null) Query.equal('userId', partnerId),
+          if (partnerId != null && partnerId.isNotEmpty)
+            Query.equal('userId', partnerId)
         ]),
         Query.orderDesc('timestamp'),
         Query.limit(limit),
       ];
 
+      // Mostrar mensaje si partnerId no es válido
+      if (partnerId == null || partnerId.isEmpty) {
+        print('⚠️ partnerId no válido, solo se mostrarán actividades del usuario actual');
+      }
+
+      print('🔍 Ejecutando consulta específica para el usuario...');
       final response = await _appwriteService.databases.listDocuments(
         databaseId: AppwriteConstants.databaseId,
         collectionId: AppwriteConstants.activitiesCollectionId,
         queries: queries,
       );
 
-      final activities = response.documents
-          .map((doc) => ActivityItem.fromAppwriteData(doc.data))
-          .toList();
+      print('📊 Respuesta de consulta específica: ${response.documents.length} documentos encontrados');
 
-      print('✅ ${activities.length} actividades cargadas');
+      if (response.documents.isNotEmpty) {
+        print('📊 Documentos que coinciden con la consulta:');
+        for (int i = 0; i < response.documents.length && i < 3; i++) {
+          final doc = response.documents[i];
+          print('   - Match ${i + 1}: userId=${doc.data['userId']}, title="${doc.data['title']}"');
+        }
+      }
+
+      final activities = <ActivityItem>[];
+      for (final doc in response.documents) {
+        try {
+          final activity = ActivityItem.fromAppwriteData(doc.data);
+          activities.add(activity);
+          print('✅ Actividad convertida correctamente: ${activity.title}');
+        } catch (e) {
+          print('❌ Error convirtiendo documento a ActivityItem: $e');
+          print('📄 Datos del documento problemático: ${doc.data}');
+        }
+      }
+
+      print('✅ ${activities.length} actividades procesadas exitosamente');
+
+      // Si no hay actividades, mostrar un mensaje adicional de depuración
+      if (activities.isEmpty) {
+        print('ℹ️ No se encontraron actividades para el usuario $userId${partnerId != null ? " o su pareja $partnerId" : ""}');
+        print('ℹ️ Verifique que existen documentos en la colección ${AppwriteConstants.activitiesCollectionId}');
+      }
+
       return activities;
     } catch (e) {
       print('❌ Error obteniendo actividades: $e');
@@ -291,6 +377,42 @@ class RealtimeSyncService {
       print('✅ Actividad $activityId marcada como leída');
     } catch (e) {
       print('❌ Error marcando actividad como leída: $e');
+      rethrow;
+    }
+  }
+
+  /// Guarda una actividad en la base de datos
+  Future<void> storeActivityInDatabase({
+    required String documentId,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      // Convertir el campo metadata a JSON string si existe
+      if (data.containsKey('metadata') && data['metadata'] is Map) {
+        try {
+          // Intentar convertir el mapa a una cadena JSON
+          data['metadata'] = json.encode(data['metadata']);
+          print('ℹ️ Campo metadata convertido a cadena JSON');
+        } catch (e) {
+          print('⚠️ No se pudo convertir metadata a JSON: $e');
+          // Si falla la conversión, establecer un valor predeterminado
+          data['metadata'] = '{}';
+        }
+      } else if (data['metadata'] == null) {
+        // Si es nulo, establecer un objeto vacío
+        data['metadata'] = '{}';
+      }
+
+      await _appwriteService.databases.createDocument(
+        databaseId: AppwriteConstants.databaseId,
+        collectionId: AppwriteConstants.activitiesCollectionId,
+        documentId: documentId,
+        data: data,
+      );
+
+      print('✅ Actividad guardada en Appwrite con ID: $documentId');
+    } catch (e) {
+      print('❌ Error guardando actividad en Appwrite: $e');
       rethrow;
     }
   }

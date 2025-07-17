@@ -69,6 +69,17 @@ class MoodCompassProvider extends ChangeNotifier {
   /// Cantidad de pulsos enviados hoy
   int get dailyPulseCount => _dailyPulseCount;
 
+  // Mapeo de estados de ánimo a coordenadas
+  static final Map<String, MoodCoordinates> moodMap = {
+    'Feliz': const MoodCoordinates(positivity: 0.8, energy: 0.5),
+    'Enérgico': const MoodCoordinates(positivity: 0.5, energy: 0.9),
+    'Tranquilo': const MoodCoordinates(positivity: 0.6, energy: -0.3),
+    'Cansado': const MoodCoordinates(positivity: -0.2, energy: -0.7),
+    'Estresado': const MoodCoordinates(positivity: -0.5, energy: 0.5),
+    'Triste': const MoodCoordinates(positivity: -0.8, energy: -0.5),
+    'Enfadado': const MoodCoordinates(positivity: -0.7, energy: 0.7),
+  };
+
   /// Inicializa el provider con sincronización mejorada
   Future<void> initialize() async {
     _setLoading(true);
@@ -275,6 +286,26 @@ class MoodCompassProvider extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Actualiza la brújula de estado y ánimo a partir de un nombre de estado de ánimo
+  Future<void> updateMoodCompassByName({required String moodName, String? contextNote}) async {
+    // Convertir el nombre del estado de ánimo a coordenadas usando el mapa
+    final coordinates = moodMap[moodName];
+    if (coordinates == null) {
+      print('❌ Nombre de estado de ánimo no válido: $moodName');
+      _setError('Estado de ánimo no reconocido');
+      return;
+    }
+
+    // Establecer el mood usando las coordenadas del mapa
+    setMood(coordinates);
+
+    // Llamar al método existente para actualizar
+    await updateMoodCompass(contextNote: contextNote);
+
+    // Registrar el ID del documento creado para confirmar que la operación fue exitosa
+    print('✅ Estado de ánimo "$moodName" enviado exitosamente (${coordinates.positivity}, ${coordinates.energy})');
   }
 
   /// Envía un pulso de pensamiento con mejor sincronización

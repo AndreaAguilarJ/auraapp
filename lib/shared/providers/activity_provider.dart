@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:appwrite/appwrite.dart'; // Importamos appwrite para usar ID
 
 import '../../features/shared_space/domain/models/activity_item.dart';
 import '../../core/services/realtime_sync_service.dart';
+import '../../core/constants/app_constants.dart'; // Importamos constantes
 import 'auth_provider.dart';
 
 /// Provider que gestiona las actividades recientes y el estado de sincronización
@@ -253,33 +255,163 @@ class ActivityProvider extends ChangeNotifier {
 
   /// Refresca las actividades
   Future<void> refresh() async {
+    _setLoading(true);
+    _clearError();
+
     try {
+      print('🔄 Forzando recarga de actividades...');
       final authProvider = AuthProvider.instance;
       if (authProvider?.currentUser != null) {
-        await _loadActivities(
-          authProvider!.currentUser!.id,
-          authProvider.currentUser!.partnerId,
-        );
+        final userId = authProvider!.currentUser!.id;
+        final partnerId = authProvider.currentUser!.partnerId;
+
+        // Mostrar los IDs que estamos usando para depuración
+        print('🔍 Recargando actividades para: userId=$userId, partnerId=$partnerId');
+
+        // Forzar recarga de actividades limpiando la lista actual
+        _activities = [];
+        notifyListeners();
+
+        // Recargar las actividades desde cero
+        await _loadActivities(userId, partnerId);
         _lastSync = DateTime.now();
+
+        print('✅ Recarga completada: ${_activities.length} actividades');
+      } else {
+        _setError('No se pudo refrescar: usuario no disponible');
+        print('❌ Error refrescando: usuario no disponible');
       }
     } catch (e) {
       _setError('Error al refrescar: $e');
+      print('❌ Error refrescando actividades: $e');
+    } finally {
+      _setLoading(false);
     }
   }
 
-  /// Agrega una actividad de conexión personalizada
-  void addConnectionActivity(String message) {
-    final activity = ActivityItem(
-      id: '${DateTime.now().millisecondsSinceEpoch}',
-      userId: 'system',
-      userName: 'AURA',
-      type: ActivityType.connection,
-      title: 'Estado de conexión',
-      description: message,
-      timestamp: DateTime.now(),
-    );
+  /// Fuerza una recarga completa de actividades (alias más explícito de refresh)
+  Future<void> refreshActivities() => refresh();
 
-    _addActivity(activity);
+  /// Guarda una nueva actividad en la base de datos de Appwrite y la añade localmente
+  Future<void> createAndAddActivity({
+    required String userId,
+    required String userName,
+    required ActivityType type,
+    required String title,
+    required String description,
+    String? partnerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final authProvider = AuthProvider.instance;
+      if (authProvider == null || authProvider.currentUser == null) {
+        print('❌ No se pudo crear actividad: usuario no autenticado');
+        return;
+      }
+
+      final now = DateTime.now();
+      final timestamp = now.toIso8601String();
+
+      // Crear datos de la actividad
+      final activityData = {
+        'userId': userId,
+        'userName': userName,
+        'partnerId': partnerId,
+        'type': type.toString().split('.').last,
+        'title': title,
+        'description': description,
+        'timestamp': timestamp,
+        'isRead': false,
+        'metadata': metadata ?? {},
+      };
+
+      print('🔄 Guardando actividad en Appwrite: $title');
+
+      // Guardar en Appwrite directamente
+      try {
+        final docId = ID.unique();
+        await _syncService.storeActivityInDatabase(
+          documentId: docId,
+          data: activityData
+        );
+
+        print('✅ Actividad guardada exitosamente en Appwrite con ID: $docId');
+
+        // Crear un ActivityItem con el ID asignado por Appwrite
+        final activity = ActivityItem(
+          id: docId,
+          userId: userId,
+          userName: userName,
+          partnerId: partnerId,
+          type: type,
+          title: title,
+          description: description,
+          timestamp: now,
+          metadata: metadata,
+          isRead: false,
+        );
+
+        // Añadir localmente también
+        _addActivity(activity);
+
+      } catch (e) {
+        print('❌ Error guardando actividad en Appwrite: $e');
+        // Añadir localmente de todos modos con un ID temporal
+        final activity = ActivityItem(
+          id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
+          userId: userId,
+          userName: userName,
+          partnerId: partnerId,
+          type: type,
+          title: title,
+          description: description,
+          timestamp: now,
+          metadata: metadata,
+          isRead: false,
+        );
+
+        _addActivity(activity);
+      }
+    } catch (e) {
+      print('❌ Error en createAndAddActivity: $e');
+    }
+  }
+
+  /// Agrega una actividad de conexión personalizada (mejorado para guardar en Appwrite)
+  Future<void> addConnectionActivity(String message) async {
+    try {
+      final authProvider = AuthProvider.instance;
+      if (authProvider?.currentUser == null) {
+        print('❌ No se pudo crear actividad de conexión: usuario no autenticado');
+        return;
+      }
+
+      // Usar el ID del usuario real en lugar de 'system'
+      await createAndAddActivity(
+        userId: authProvider!.currentUser!.id, // <- CAMBIO PRINCIPAL: usar el ID real del usuario
+        userName: authProvider.currentUser!.name, // <- CAMBIO: usar el nombre real del usuario
+        type: ActivityType.connection,
+        title: 'Estado de conexión',
+        description: message,
+        partnerId: authProvider.currentUser!.partnerId,
+      );
+
+    } catch (e) {
+      print('❌ Error creando actividad de conexión: $e');
+      // Fallback al método antiguo si hay errores, pero también con el ID real del usuario
+      final authProvider = AuthProvider.instance;
+      final activity = ActivityItem(
+        id: '${DateTime.now().millisecondsSinceEpoch}',
+        userId: authProvider?.currentUser?.id ?? 'system', // usar ID real o system como fallback
+        userName: authProvider?.currentUser?.name ?? 'AURA',
+        type: ActivityType.connection,
+        title: 'Estado de conexión',
+        description: message,
+        timestamp: DateTime.now(),
+      );
+
+      _addActivity(activity);
+    }
   }
 
   /// Establece el estado de carga

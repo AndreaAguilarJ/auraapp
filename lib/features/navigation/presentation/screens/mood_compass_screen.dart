@@ -4,7 +4,6 @@ import '../../../../shared/providers/mood_compass_provider.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../features/shared_space/domain/models/mood_compass_data.dart';
 import '../../../../features/shared_space/presentation/widgets/status_selector_widget.dart';
-import '../../../../features/shared_space/presentation/widgets/mood_spectrum_widget.dart';
 import '../../../../features/shared_space/presentation/widgets/context_note_widget.dart';
 
 /// Pantalla principal de la Brújula de Estado y Ánimo
@@ -55,14 +54,31 @@ class _MoodCompassScreenState extends State<MoodCompassScreen>
     });
 
     try {
-      await provider.updateMoodCompass(
+      // Determinar qué estado de ánimo está seleccionado actualmente
+      String? selectedMoodName;
+      for (final entry in MoodCompassProvider.moodMap.entries) {
+        if (provider.selectedMood.positivity == entry.value.positivity &&
+            provider.selectedMood.energy == entry.value.energy) {
+          selectedMoodName = entry.key;
+          break;
+        }
+      }
+
+      if (selectedMoodName == null) {
+        throw Exception("Por favor, selecciona un estado de ánimo");
+      }
+
+      // Usar el nuevo método que acepta un nombre de estado de ánimo
+      await provider.updateMoodCompassByName(
+        moodName: selectedMoodName,
         contextNote: _noteController.text,
       );
 
+      // Mostrar feedback al usuario
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('✨ Tu aura ha sido actualizada'),
+            content: Text('✨ Tu estado "$selectedMoodName" ha sido compartido'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -212,6 +228,21 @@ class _MoodCompassScreenState extends State<MoodCompassScreen>
   }
 
   Widget _buildMoodSection(ThemeData theme, MoodCompassProvider provider) {
+    // Lista de estados de ánimo disponibles (obtenidos del mapa definido en el provider)
+    final moodNames = MoodCompassProvider.moodMap.keys.toList();
+
+    // Estado para rastrear el estado de ánimo seleccionado actualmente
+    String? _selectedMoodName;
+
+    // Para cada estado de ánimo en el mapa, verificar si las coordenadas coinciden con el seleccionado actualmente
+    for (final entry in MoodCompassProvider.moodMap.entries) {
+      if (provider.selectedMood.positivity == entry.value.positivity &&
+          provider.selectedMood.energy == entry.value.energy) {
+        _selectedMoodName = entry.key;
+        break;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -224,20 +255,94 @@ class _MoodCompassScreenState extends State<MoodCompassScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'Toca y arrastra para expresar tu energía y positividad',
+          'Selecciona el estado de ánimo que mejor represente cómo te sientes',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
           ),
         ),
         const SizedBox(height: 16),
-        Center(
-          child: MoodSpectrumWidget(
-            currentMood: provider.selectedMood,
-            onMoodChanged: provider.setMood,
-          ),
+
+        // Wrap de botones de estados de ánimo
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 12.0,
+          children: moodNames.map((moodName) {
+            // Determinar si este estado de ánimo está seleccionado
+            final isSelected = _selectedMoodName == moodName;
+
+            // Obtener las coordenadas para este estado de ánimo para darle colores acordes
+            final coordinates = MoodCompassProvider.moodMap[moodName]!
+;
+            // Determinar color basado en positividad (rojo para negativo, verde para positivo)
+            final baseColor = coordinates.positivity > 0
+                ? Color.lerp(Colors.yellow, Colors.green, (coordinates.positivity.abs() / 1.0))!
+                : Color.lerp(Colors.orange, Colors.red, (coordinates.positivity.abs() / 1.0))!;
+
+            // Determinar brillo basado en energía
+            final brightness = coordinates.energy > 0 ? 1.0 : 0.7;
+
+            return ElevatedButton(
+              onPressed: () {
+                // Cuando se presiona un botón, llamar a setMood con las coordenadas correspondientes
+                provider.setMood(MoodCompassProvider.moodMap[moodName]!);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isSelected
+                    ? baseColor.withOpacity(0.7 * brightness)
+                    : theme.colorScheme.surface.withAlpha((0.1 * 255).toInt()),
+                foregroundColor: isSelected
+                    ? Colors.white
+                    : theme.colorScheme.onSurface,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                elevation: isSelected ? 4 : 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected
+                        ? baseColor
+                        : theme.colorScheme.onSurface.withAlpha((0.2 * 255).toInt()),
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Agregar un ícono que represente el estado de ánimo
+                  Icon(
+                    _getMoodIcon(moodName),
+                    size: 20,
+                    color: isSelected
+                        ? Colors.white
+                        : theme.colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(moodName),
+                  if (isSelected)
+                    const SizedBox(width: 8),
+                  if (isSelected)
+                    const Icon(Icons.check, size: 18),
+                ],
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
+  }
+
+  // Helper para obtener un ícono apropiado para cada estado de ánimo
+  IconData _getMoodIcon(String moodName) {
+    switch (moodName) {
+      case 'Feliz': return Icons.sentiment_very_satisfied;
+      case 'Enérgico': return Icons.bolt;
+      case 'Tranquilo': return Icons.spa;
+      case 'Cansado': return Icons.bedtime;
+      case 'Estresado': return Icons.psychology;
+      case 'Triste': return Icons.sentiment_very_dissatisfied;
+      case 'Enfadado': return Icons.whatshot;
+      default: return Icons.mood;
+    }
   }
 
   Widget _buildContextNoteSection(ThemeData theme) {

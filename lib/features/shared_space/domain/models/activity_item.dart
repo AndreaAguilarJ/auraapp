@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'dart:convert'; // Agregamos esta importación para json.decode
 
 /// Representa un elemento de actividad reciente en la aplicación
 class ActivityItem extends Equatable {
@@ -28,11 +29,31 @@ class ActivityItem extends Equatable {
 
   /// Crea una instancia desde datos de Appwrite
   factory ActivityItem.fromAppwriteData(Map<String, dynamic> data) {
+    // Procesar el campo metadata que puede ser String (JSON) o Map
+    Map<String, dynamic>? metadataMap;
+    if (data['metadata'] is String) {
+      try {
+        // Si es una cadena, intentar convertirla de JSON a Map
+        final metadataStr = data['metadata'] as String;
+        if (metadataStr.isNotEmpty && metadataStr != '{}') {
+          metadataMap = json.decode(metadataStr) as Map<String, dynamic>;
+        } else {
+          metadataMap = {};
+        }
+      } catch (e) {
+        print('⚠️ Error al convertir metadata de JSON a Map en ActivityItem.fromAppwriteData: $e');
+        metadataMap = {};
+      }
+    } else {
+      // Si ya es un Map o null, usarlo directamente
+      metadataMap = data['metadata'] as Map<String, dynamic>?;
+    }
+
     return ActivityItem(
       id: data['\$id'] ?? '',
       userId: data['userId'] ?? '',
       userName: data['userName'] ?? '',
-      partnerId: data['partnerId'], // Nuevo campo
+      partnerId: data['partnerId'],
       type: ActivityType.values.firstWhere(
         (e) => e.toString().split('.').last == data['type'],
         orElse: () => ActivityType.other,
@@ -42,7 +63,7 @@ class ActivityItem extends Equatable {
       timestamp: data['timestamp'] != null
           ? DateTime.parse(data['timestamp'])
           : DateTime.now(),
-      metadata: data['metadata'],
+      metadata: metadataMap, // Usar el metadata procesado
       isRead: data['isRead'] ?? false,
     );
   }

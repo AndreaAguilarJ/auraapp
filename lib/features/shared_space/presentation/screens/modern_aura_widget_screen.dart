@@ -398,15 +398,111 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
   }
 
   Widget _buildEmotionalStatus(ThemeData theme, MoodCompassProvider provider) {
+    // Obtener el estado actual del usuario
+    final userMoodData = provider.currentData;
+    final partnerMoodData = provider.partnerData;
+
+    // Función helper para convertir coordenadas a nombre de estado de ánimo
+    String getMoodNameFromCoordinates(double positivity, double energy) {
+      // Buscar el estado de ánimo más cercano en el mapa
+      String closestMood = 'Neutro';
+      double closestDistance = double.infinity;
+
+      for (final entry in MoodCompassProvider.moodMap.entries) {
+        final distance = ((entry.value.positivity - positivity).abs() +
+                        (entry.value.energy - energy).abs());
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestMood = entry.key;
+        }
+      }
+      return closestMood;
+    }
+
+    // Determinar el estado del usuario
+    String userStatus = 'Sin actualizar';
+    IconData userIcon = Icons.psychology_rounded;
+    Color userColor = theme.colorScheme.primary;
+
+    if (userMoodData != null) {
+      // Usar las coordenadas para determinar el estado de ánimo
+      final moodCoords = userMoodData.mood;
+      userStatus = getMoodNameFromCoordinates(moodCoords.positivity, moodCoords.energy);
+
+      // Si hay una nota contextual, agregarla como información adicional
+      if (userMoodData.contextNote.isNotEmpty) {
+        userStatus = '$userStatus • ${userMoodData.contextNote}';
+      }
+
+      // Determinar ícono y color basado en el estado
+      if (userStatus.contains('Feliz') || userStatus.contains('Energético') || userStatus.contains('Enérgico')) {
+        userIcon = Icons.sentiment_very_satisfied_rounded;
+        userColor = Colors.amber;
+      } else if (userStatus.contains('Triste') || userStatus.contains('Melancólico')) {
+        userIcon = Icons.sentiment_very_dissatisfied_rounded;
+        userColor = Colors.blue;
+      } else if (userStatus.contains('Estresado') || userStatus.contains('Ansioso')) {
+        userIcon = Icons.psychology_alt_rounded;
+        userColor = Colors.orange;
+      } else if (userStatus.contains('Tranquilo') || userStatus.contains('Reflexivo')) {
+        userIcon = Icons.spa_rounded;
+        userColor = Colors.green;
+      } else if (userStatus.contains('Cansado')) {
+        userIcon = Icons.bedtime_rounded;
+        userColor = Colors.indigo;
+      } else if (userStatus.contains('Enfadado')) {
+        userIcon = Icons.whatshot_rounded;
+        userColor = Colors.red;
+      }
+    }
+
+    // Determinar el estado de la pareja
+    String partnerStatus = 'Sin conexión';
+    IconData partnerIcon = Icons.person_outline_rounded;
+    Color partnerColor = theme.colorScheme.tertiary;
+
+    if (partnerMoodData != null) {
+      // Usar las coordenadas para determinar el estado de ánimo de la pareja
+      final moodCoords = partnerMoodData.mood;
+      partnerStatus = getMoodNameFromCoordinates(moodCoords.positivity, moodCoords.energy);
+
+      // Si hay una nota contextual, agregarla como información adicional
+      if (partnerMoodData.contextNote.isNotEmpty) {
+        partnerStatus = '$partnerStatus • ${partnerMoodData.contextNote}';
+      }
+
+      // Determinar ícono y color basado en el estado de la pareja
+      if (partnerStatus.contains('Feliz') || partnerStatus.contains('Energético') || partnerStatus.contains('Enérgico')) {
+        partnerIcon = Icons.sentiment_very_satisfied_rounded;
+        partnerColor = Colors.amber;
+      } else if (partnerStatus.contains('Triste') || partnerStatus.contains('Melancólico')) {
+        partnerIcon = Icons.sentiment_very_dissatisfied_rounded;
+        partnerColor = Colors.blue;
+      } else if (partnerStatus.contains('Estresado') || partnerStatus.contains('Ansioso')) {
+        partnerIcon = Icons.psychology_alt_rounded;
+        partnerColor = Colors.orange;
+      } else if (partnerStatus.contains('Tranquilo') || partnerStatus.contains('Reflexivo')) {
+        partnerIcon = Icons.spa_rounded;
+        partnerColor = Colors.green;
+      } else if (partnerStatus.contains('Cansado')) {
+        partnerIcon = Icons.bedtime_rounded;
+        partnerColor = Colors.indigo;
+      } else if (partnerStatus.contains('Enfadado')) {
+        partnerIcon = Icons.whatshot_rounded;
+        partnerColor = Colors.red;
+      }
+    }
+
     return Row(
       children: [
         Expanded(
           child: _buildStatusCard(
             theme,
             title: 'Tu estado',
-            status: 'Tranquilo',
-            color: theme.colorScheme.primary,
-            icon: Icons.psychology_rounded,
+            status: userStatus,
+            color: userColor,
+            icon: userIcon,
+            lastUpdated: userMoodData?.lastUpdated,
           ),
         ),
         const SizedBox(width: AuraSpacing.m),
@@ -414,9 +510,10 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
           child: _buildStatusCard(
             theme,
             title: 'Su estado',
-            status: 'Feliz',
-            color: theme.colorScheme.tertiary,
-            icon: Icons.sentiment_very_satisfied_rounded,
+            status: partnerStatus,
+            color: partnerColor,
+            icon: partnerIcon,
+            lastUpdated: partnerMoodData?.lastUpdated,
           ),
         ),
       ],
@@ -429,6 +526,7 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     required String status,
     required Color color,
     required IconData icon,
+    DateTime? lastUpdated, // Nuevo parámetro opcional
   }) {
     return Container(
       padding: const EdgeInsets.all(AuraSpacing.m),
@@ -460,10 +558,40 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
               color: color,
               fontWeight: FontWeight.w600,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
+          // Mostrar tiempo de última actualización si está disponible
+          if (lastUpdated != null) ...[
+            const SizedBox(height: AuraSpacing.xs),
+            Text(
+              _formatTimeAgo(lastUpdated),
+              style: AuraTypography.labelSmall.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                fontSize: 10,
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  // Método helper para formatear el tiempo transcurrido
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'ahora';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else {
+      return '${difference.inDays}d';
+    }
   }
 
   Widget _buildThoughtButton(ThemeData theme, MoodCompassProvider provider) {

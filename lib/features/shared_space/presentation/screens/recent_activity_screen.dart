@@ -30,10 +30,18 @@ class _RecentActivityScreenState extends State<RecentActivityScreen>
     final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
+      // Verificar que tenemos un ID de usuario y pareja válidos
+      final userId = authProvider.currentUser!.id;
+      final partnerId = authProvider.currentUser!.partnerId;
+
+      print('Inicializando actividades para usuario: $userId, pareja: $partnerId');
+
       await activityProvider.initialize(
-        authProvider.currentUser!.id,
-        authProvider.currentUser!.partnerId,
+        userId,
+        partnerId,
       );
+    } else {
+      print('❌ No se pudo inicializar el ActivityProvider: usuario no disponible');
     }
   }
 
