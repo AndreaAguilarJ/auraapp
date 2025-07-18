@@ -6,7 +6,7 @@ import '../../../../shared/providers/mood_compass_provider.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/modern_components.dart';
 
-/// Pantalla rediseñada del Widget Aura - Moderno y expresivo
+/// Pantalla ultra-moderna del Widget Aura con diseño futurista
 class ModernAuraWidgetScreen extends StatefulWidget {
   const ModernAuraWidgetScreen({Key? key}) : super(key: key);
 
@@ -19,39 +19,63 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
   late AnimationController _heartbeatController;
   late AnimationController _connectionController;
   late AnimationController _thoughtController;
+  late AnimationController _particleController;
+  late AnimationController _breathingController;
+  late AnimationController _floatingController;
 
   late Animation<double> _heartbeatAnimation;
   late Animation<double> _connectionPulse;
   late Animation<double> _thoughtRipple;
+  late Animation<double> _particleAnimation;
+  late Animation<double> _breathingScale;
+  late Animation<double> _floatingOffset;
 
   @override
   void initState() {
     super.initState();
 
-    // Animación de latido del corazón emocional
+    // Animación de latido del corazón más suave
     _heartbeatController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
-    // Animación de conexión entre las auras
+    // Animación de conexión entre las auras más fluida
     _connectionController = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 4),
       vsync: this,
     );
 
     // Animación para el botón "Pienso en ti"
     _thoughtController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Nueva animación de partículas flotantes
+    _particleController = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    );
+
+    // Animación de respiración para los elementos
+    _breathingController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+
+    // Animación de flotación suave
+    _floatingController = AnimationController(
+      duration: const Duration(seconds: 6),
       vsync: this,
     );
 
     _heartbeatAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.05,
+      end: 1.08,
     ).animate(CurvedAnimation(
       parent: _heartbeatController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeInOutSine,
     ));
 
     _connectionPulse = Tween<double>(
@@ -59,7 +83,7 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _connectionController,
-      curve: Curves.easeInOutSine,
+      curve: Curves.easeInOutCubic,
     ));
 
     _thoughtRipple = Tween<double>(
@@ -67,12 +91,39 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _thoughtController,
-      curve: AuraAnimations.elastic,
+      curve: Curves.elasticOut,
+    ));
+
+    _particleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _particleController,
+      curve: Curves.linear,
+    ));
+
+    _breathingScale = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(CurvedAnimation(
+      parent: _breathingController,
+      curve: Curves.easeInOutSine,
+    ));
+
+    _floatingOffset = Tween<double>(
+      begin: -10.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _floatingController,
+      curve: Curves.easeInOutSine,
     ));
 
     // Iniciar animaciones
     _heartbeatController.repeat(reverse: true);
     _connectionController.repeat();
+    _particleController.repeat();
+    _breathingController.repeat(reverse: true);
+    _floatingController.repeat(reverse: true);
   }
 
   @override
@@ -80,6 +131,9 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     _heartbeatController.dispose();
     _connectionController.dispose();
     _thoughtController.dispose();
+    _particleController.dispose();
+    _breathingController.dispose();
+    _floatingController.dispose();
     super.dispose();
   }
 
@@ -91,68 +145,110 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: _buildModernAppBar(theme),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.colorScheme.surface,
-              theme.colorScheme.surfaceContainerHighest,
-              theme.colorScheme.surface,
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: Consumer<MoodCompassProvider>(
-          builder: (context, provider, child) {
-            if (provider.isLoading) {
-              return _buildLoadingState(theme);
-            }
+      body: Stack(
+        children: [
+          // Fondo con gradiente dinámico
+          _buildDynamicBackground(theme, size),
+          // Partículas flotantes
+          _buildFloatingParticles(theme, size),
+          // Contenido principal
+          Consumer<MoodCompassProvider>(
+            builder: (context, provider, child) {
+              if (provider.isLoading) {
+                return _buildLoadingState(theme);
+              }
 
-            if (provider.errorMessage != null) {
-              return _buildErrorState(theme, provider);
-            }
+              if (provider.errorMessage != null) {
+                return _buildErrorState(theme, provider);
+              }
 
-            return SafeArea(
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AuraSpacing.l),
-                      child: Column(
-                        children: [
-                          // Header con saludo personalizado
-                          _buildPersonalizedHeader(theme, provider),
-                          const SizedBox(height: AuraSpacing.xl),
+              return SafeArea(
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AuraSpacing.l),
+                        child: Column(
+                          children: [
+                            // Header ultra-moderno
+                            _buildUltraModernHeader(theme, provider),
+                            const SizedBox(height: AuraSpacing.xl),
 
-                          // Widget principal de conexión emocional
-                          _buildEmotionalConnectionWidget(theme, provider),
-                          const SizedBox(height: AuraSpacing.xl),
+                            // Widget principal rediseñado
+                            _buildUltraModernConnectionWidget(theme, provider),
+                            const SizedBox(height: AuraSpacing.xl),
 
-                          // Botón "Pienso en ti" rediseñado
-                          _buildThoughtButton(theme, provider),
-                          const SizedBox(height: AuraSpacing.l),
+                            // Botón futurista "Pienso en ti"
+                            _buildFuturisticThoughtButton(theme, provider),
+                            const SizedBox(height: AuraSpacing.l),
 
-                          // Indicadores de estado de la relación
-                          _buildRelationshipIndicators(theme, provider),
-                          const SizedBox(height: AuraSpacing.xl),
+                            // Indicadores de estado modernos
+                            _buildModernRelationshipIndicators(theme, provider),
+                            const SizedBox(height: AuraSpacing.xl),
 
-                          // Cards de información contextual
-                          _buildContextualCards(theme, provider),
-                        ],
+                            // Cards glassmorphism
+                            _buildGlassmorphismCards(theme, provider),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      floatingActionButton: _buildModernFAB(theme),
+      floatingActionButton: _buildUltraModernFAB(theme),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  Widget _buildDynamicBackground(ThemeData theme, Size size) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_connectionPulse, _breathingScale]),
+      builder: (context, child) {
+        return Container(
+          width: size.width,
+          height: size.height,
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.topLeft,
+              radius: 1.5 + (_connectionPulse.value * 0.3),
+              colors: [
+                theme.colorScheme.primary.withOpacity(0.1),
+                theme.colorScheme.secondary.withOpacity(0.05),
+                theme.colorScheme.tertiary.withOpacity(0.02),
+                theme.colorScheme.surface,
+              ],
+              stops: const [0.0, 0.3, 0.7, 1.0],
+            ),
+          ),
+          child: CustomPaint(
+            painter: MeshGradientPainter(
+              animation: _connectionPulse.value,
+              theme: theme,
+            ),
+            size: size,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFloatingParticles(ThemeData theme, Size size) {
+    return AnimatedBuilder(
+      animation: _particleAnimation,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: ParticleSystemPainter(
+            animation: _particleAnimation.value,
+            theme: theme,
+          ),
+          size: size,
+        );
+      },
     );
   }
 
@@ -161,20 +257,71 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
       backgroundColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      leading: IconButton(
-        icon: Icon(
-          Icons.menu_rounded,
-          color: theme.colorScheme.onSurface,
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.surface.withOpacity(0.8),
+                  theme.colorScheme.surface.withOpacity(0.6),
+                ],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outline.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+            ),
+          ),
         ),
-        onPressed: () {},
       ),
-      actions: [
-        IconButton(
+      leading: Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: theme.colorScheme.surface.withOpacity(0.8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IconButton(
           icon: Icon(
-            Icons.settings_rounded,
+            Icons.menu_rounded,
             color: theme.colorScheme.onSurface,
           ),
           onPressed: () {},
+        ),
+      ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: theme.colorScheme.surface.withOpacity(0.8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.tune_rounded,
+              color: theme.colorScheme.onSurface,
+            ),
+            onPressed: () {},
+          ),
         ),
         const SizedBox(width: AuraSpacing.s),
       ],
@@ -255,7 +402,7 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     );
   }
 
-  Widget _buildPersonalizedHeader(ThemeData theme, MoodCompassProvider provider) {
+  Widget _buildUltraModernHeader(ThemeData theme, MoodCompassProvider provider) {
     final timeOfDay = DateTime.now().hour;
     final greeting = timeOfDay < 12 ? 'Buenos días' :
                     timeOfDay < 18 ? 'Buenas tardes' : 'Buenas noches';
@@ -285,7 +432,7 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     );
   }
 
-  Widget _buildEmotionalConnectionWidget(ThemeData theme, MoodCompassProvider provider) {
+  Widget _buildUltraModernConnectionWidget(ThemeData theme, MoodCompassProvider provider) {
     return AnimatedBuilder(
       animation: Listenable.merge([_heartbeatAnimation, _connectionPulse]),
       builder: (context, child) {
@@ -594,7 +741,7 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     }
   }
 
-  Widget _buildThoughtButton(ThemeData theme, MoodCompassProvider provider) {
+  Widget _buildFuturisticThoughtButton(ThemeData theme, MoodCompassProvider provider) {
     return AnimatedBuilder(
       animation: _thoughtRipple,
       builder: (context, child) {
@@ -666,7 +813,7 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     );
   }
 
-  Widget _buildRelationshipIndicators(ThemeData theme, MoodCompassProvider provider) {
+  Widget _buildModernRelationshipIndicators(ThemeData theme, MoodCompassProvider provider) {
     return Row(
       children: [
         Expanded(
@@ -749,13 +896,60 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
     );
   }
 
-  Widget _buildContextualCards(ThemeData theme, MoodCompassProvider provider) {
+  Widget _buildGlassmorphismCards(ThemeData theme, MoodCompassProvider provider) {
     return Column(
       children: [
         // Card de actividad reciente
-        Card(
-          child: Padding(
+        _buildGlassmorphismCard(
+          theme,
+          title: 'Actividad reciente',
+          description: 'Tu pareja acaba de actualizar su estado',
+          icon: Icons.notification_important_rounded,
+          gradient: theme.energyGradient,
+        ),
+        const SizedBox(height: AuraSpacing.m),
+
+        // Card de consejos de conexión
+        _buildGlassmorphismCard(
+          theme,
+          title: 'Consejo del día',
+          description: 'Comparte algo que te haga sonreír hoy',
+          icon: Icons.lightbulb_rounded,
+          gradient: theme.serenityGradient,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGlassmorphismCard(
+    ThemeData theme, {
+    required String title,
+    required String description,
+    required IconData icon,
+    required Gradient gradient,
+  }) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
             padding: const EdgeInsets.all(AuraSpacing.m),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 Container(
@@ -763,10 +957,10 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: theme.energyGradient,
+                    gradient: gradient,
                   ),
                   child: Icon(
-                    Icons.notification_important_rounded,
+                    icon,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -777,13 +971,14 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Actividad reciente',
+                        title,
                         style: AuraTypography.labelLarge.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       Text(
-                        'Tu pareja acaba de actualizar su estado',
+                        description,
                         style: AuraTypography.bodySmall.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -799,56 +994,11 @@ class _ModernAuraWidgetScreenState extends State<ModernAuraWidgetScreen>
             ),
           ),
         ),
-        const SizedBox(height: AuraSpacing.m),
-
-        // Card de consejos de conexión
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AuraSpacing.m),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: theme.serenityGradient,
-                  ),
-                  child: Icon(
-                    Icons.lightbulb_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: AuraSpacing.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Consejo del día',
-                        style: AuraTypography.labelLarge.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Comparte algo que te haga sonreír hoy',
-                        style: AuraTypography.bodySmall.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildModernFAB(ThemeData theme) {
+  Widget _buildUltraModernFAB(ThemeData theme) {
     return FloatingActionButton(
       onPressed: () {
         // Navegar a la pantalla de configuración del estado
@@ -927,5 +1077,189 @@ class ConnectionLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(ConnectionLinePainter oldDelegate) {
     return oldDelegate.progress != progress || oldDelegate.color != color;
+  }
+}
+
+/// Painter personalizado para el sistema de partículas
+class ParticleSystemPainter extends CustomPainter {
+  final double animation;
+  final ThemeData theme;
+  late final List<Particle> particles;
+
+  ParticleSystemPainter({
+    required this.animation,
+    required this.theme,
+  }) {
+    particles = _generateParticles();
+  }
+
+  List<Particle> _generateParticles() {
+    final particleList = <Particle>[];
+    final random = math.Random(42); // Seed fijo para consistencia
+
+    for (int i = 0; i < 50; i++) {
+      particleList.add(Particle(
+        x: random.nextDouble(),
+        y: random.nextDouble(),
+        size: 1 + random.nextDouble() * 3,
+        speed: 0.1 + random.nextDouble() * 0.3,
+        opacity: 0.3 + random.nextDouble() * 0.7,
+        color: i % 3 == 0
+            ? theme.colorScheme.primary
+            : i % 3 == 1
+                ? theme.colorScheme.secondary
+                : theme.colorScheme.tertiary,
+      ));
+    }
+    return particleList;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final particle in particles) {
+      final paint = Paint()
+        ..color = particle.color.withOpacity(
+          particle.opacity * (0.5 + 0.5 * math.sin(animation * math.pi * 2))
+        )
+        ..style = PaintingStyle.fill;
+
+      final x = (particle.x + animation * particle.speed) % 1.0 * size.width;
+      final y = (particle.y + animation * particle.speed * 0.5) % 1.0 * size.height;
+
+      // Efecto de respiración en las partículas
+      final breathScale = 1.0 + 0.3 * math.sin(animation * math.pi * 4 + particle.x * 10);
+
+      canvas.drawCircle(
+        Offset(x, y),
+        particle.size * breathScale,
+        paint,
+      );
+
+      // Estela de la partícula
+      if (particle.size > 2) {
+        final trailPaint = Paint()
+          ..color = particle.color.withOpacity(particle.opacity * 0.3)
+          ..style = PaintingStyle.fill;
+
+        canvas.drawCircle(
+          Offset(x - 5, y - 5),
+          particle.size * 0.5 * breathScale,
+          trailPaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(ParticleSystemPainter oldDelegate) {
+    return oldDelegate.animation != animation;
+  }
+}
+
+class Particle {
+  final double x;
+  final double y;
+  final double size;
+  final double speed;
+  final double opacity;
+  final Color color;
+
+  Particle({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.speed,
+    required this.opacity,
+    required this.color,
+  });
+}
+
+/// Painter mejorado para el gradiente de malla con efectos dinámicos
+class MeshGradientPainter extends CustomPainter {
+  final double animation;
+  final ThemeData theme;
+
+  MeshGradientPainter({
+    required this.animation,
+    required this.theme,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Crear múltiples gradientes que se mueven
+    final paint1 = Paint()
+      ..shader = RadialGradient(
+        center: Alignment(
+          -0.5 + math.sin(animation * math.pi) * 0.3,
+          -0.5 + math.cos(animation * math.pi * 0.7) * 0.3,
+        ),
+        radius: 0.8 + math.sin(animation * math.pi * 2) * 0.2,
+        colors: [
+          theme.colorScheme.primary.withOpacity(0.15),
+          theme.colorScheme.primary.withOpacity(0.05),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.6, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final paint2 = Paint()
+      ..shader = RadialGradient(
+        center: Alignment(
+          0.5 + math.cos(animation * math.pi * 1.3) * 0.4,
+          0.5 + math.sin(animation * math.pi * 0.9) * 0.4,
+        ),
+        radius: 0.6 + math.cos(animation * math.pi * 1.5) * 0.2,
+        colors: [
+          theme.colorScheme.secondary.withOpacity(0.12),
+          theme.colorScheme.secondary.withOpacity(0.04),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.7, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final paint3 = Paint()
+      ..shader = RadialGradient(
+        center: Alignment(
+          math.sin(animation * math.pi * 0.8) * 0.5,
+          math.cos(animation * math.pi * 1.2) * 0.5,
+        ),
+        radius: 0.9 + math.sin(animation * math.pi * 1.8) * 0.1,
+        colors: [
+          theme.colorScheme.tertiary.withOpacity(0.1),
+          theme.colorScheme.tertiary.withOpacity(0.03),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    // Dibujar los gradientes superpuestos
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint1);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint2);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint3);
+
+    // Añadir ondas sutiles
+    final wavePaint = Paint()
+      ..color = theme.colorScheme.primary.withOpacity(0.03)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    for (int i = 0; i < 5; i++) {
+      final path = Path();
+      final waveOffset = animation * 200 + i * 50;
+
+      path.moveTo(0, size.height / 2);
+      for (double x = 0; x <= size.width; x += 10) {
+        final y = size.height / 2 +
+                  math.sin((x + waveOffset) * 0.01) * 30 * (i + 1) * 0.2;
+        path.lineTo(x, y);
+      }
+
+      canvas.drawPath(path, wavePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(MeshGradientPainter oldDelegate) {
+    return oldDelegate.animation != animation;
   }
 }
