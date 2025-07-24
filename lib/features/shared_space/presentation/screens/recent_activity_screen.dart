@@ -182,9 +182,9 @@ class _RecentActivityScreenState extends State<RecentActivityScreen>
               center: Alignment.topRight,
               radius: 1.2 + (_pulseAnimation.value * 0.2),
               colors: [
-                theme.colorScheme.secondary.withOpacity(0.08),
-                theme.colorScheme.tertiary.withOpacity(0.04),
-                theme.colorScheme.primary.withOpacity(0.02),
+                theme.colorScheme.secondary.withValues(alpha: 0.08),
+                theme.colorScheme.tertiary.withValues(alpha: 0.04),
+                theme.colorScheme.primary.withValues(alpha: 0.02),
                 Colors.transparent,
               ],
               stops: const [0.0, 0.4, 0.7, 1.0],
@@ -484,12 +484,12 @@ class _RecentActivityScreenState extends State<RecentActivityScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            theme.colorScheme.primary.withOpacity(0.1),
-            theme.colorScheme.secondary.withOpacity(0.05),
+            theme.colorScheme.primary.withValues(alpha: 0.1),
+            theme.colorScheme.secondary.withValues(alpha: 0.05),
           ],
         ),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.1),
+          color: theme.colorScheme.outline.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -535,7 +535,7 @@ class _RecentActivityScreenState extends State<RecentActivityScreen>
                         ),
                       ],
                     ),
-                  },
+                  ),
                 ],
               ),
               const SizedBox(height: AuraSpacing.m),
@@ -608,7 +608,7 @@ class _RecentActivityScreenState extends State<RecentActivityScreen>
             return Transform.translate(
               offset: Offset(50 * (1 - animValue), 0),
               child: Opacity(
-                opacity: animValue,
+                opacity: animValue.clamp(0.0, 1.0),
                 child: Container(
                   margin: EdgeInsets.only(
                     left: AuraSpacing.l,
@@ -945,10 +945,12 @@ class ActivityParticlesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final particle in particles) {
+      // Clamp opacity to valid range to prevent assertion errors
+      final calculatedOpacity = particle.opacity * (0.6 + 0.4 * math.sin(animation * math.pi + particle.phase));
+      final clampedOpacity = math.max(0.0, math.min(1.0, calculatedOpacity));
+
       final paint = Paint()
-        ..color = particle.color.withOpacity(
-          particle.opacity * (0.6 + 0.4 * math.sin(animation * math.pi + particle.phase))
-        )
+        ..color = particle.color.withOpacity(clampedOpacity)
         ..style = PaintingStyle.fill;
 
       final x = (particle.x + animation * particle.speed) % 1.0 * size.width;

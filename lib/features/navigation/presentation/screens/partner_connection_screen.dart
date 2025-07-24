@@ -8,6 +8,7 @@ import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/modern_components.dart';
 import '../../../../core/services/appwrite_service.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../features/guided_conversation/presentation/screens/conversation_invitation_screen.dart';
 import 'package:appwrite/appwrite.dart';
 
 /// Pantalla para gestionar la conexión con la pareja
@@ -1034,6 +1035,16 @@ class _PartnerConnectionScreenState extends State<PartnerConnectionScreen>
   Widget _buildConnectionManagement(ThemeData theme) {
     return Column(
       children: [
+        // NUEVO: Botón para Conversaciones Guiadas
+        _buildManagementOption(
+          theme,
+          icon: Icons.psychology,
+          title: '💫 Conversación Guiada',
+          subtitle: 'Mejora vuestra comunicación con terapia de pareja',
+          onTap: () => _startGuidedConversation(),
+          isHighlight: true,
+        ),
+        const SizedBox(height: 12),
         _buildManagementOption(
           theme,
           icon: Icons.pause_circle_outline,
@@ -1067,6 +1078,7 @@ class _PartnerConnectionScreenState extends State<PartnerConnectionScreen>
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    bool isHighlight = false,
   }) {
     return InkWell(
       onTap: onTap,
@@ -1077,7 +1089,8 @@ class _PartnerConnectionScreenState extends State<PartnerConnectionScreen>
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: theme.colorScheme.outline.withOpacity(0.2),
+            color: isHighlight ? theme.colorScheme.primary : theme.colorScheme.outline.withOpacity(0.2),
+            width: isHighlight ? 2 : 1,
           ),
         ),
         child: Row(
@@ -1112,6 +1125,26 @@ class _PartnerConnectionScreenState extends State<PartnerConnectionScreen>
               color: theme.colorScheme.onSurface.withOpacity(0.4),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Inicia una conversación guiada
+  void _startGuidedConversation() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUser;
+
+    if (user?.partnerId == null) {
+      _showMessage('Error: Necesitas estar conectado con tu pareja para iniciar una conversación guiada', isError: true);
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ConversationInvitationScreen(
+          partnerUserId: user!.partnerId!,
+          partnerName: user.partnerId!, // Aquí podrías obtener el nombre real de la pareja
         ),
       ),
     );

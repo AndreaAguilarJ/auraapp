@@ -11,6 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Firebase Dependencies
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.1.3
+  permission_handler: ^11.3.1
+
   # Core Dependencies
   cupertino_icons: ^1.0.8
 
@@ -24,50 +29,46 @@ dependencies:
   animated_text_kit: ^4.2.2
   flutter_animate: ^4.5.0
   flutter_staggered_animations: ^1.1.1
+  lottie: ^3.1.2
 
-  # Local Storage & Cache
-  shared_preferences: ^2.3.4
+  # HTTP & Networking
+  http: ^1.2.1
+  dio: ^5.4.3+1
+
+  # Local Storage
+  shared_preferences: ^2.2.3
   hive: ^2.2.3
   hive_flutter: ^1.1.0
 
-  # Connectivity & Network
-  connectivity_plus: ^6.1.4
-  dio: ^5.7.0
+  # Utilities
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  crypto: ^3.0.3
+  flutter_dotenv: ^5.1.0
 
-  # Notifications
-  flutter_local_notifications: ^19.3.0
+  # Image & Media
+  image_picker: ^1.1.1
+  cached_network_image: ^3.3.1
 
-  # Utils & Helpers
-  intl: ^0.20.2
-  uuid: ^4.5.1
-  equatable: ^2.0.5
-  json_annotation: ^4.9.0
+  # Connectivity & Device Info
+  connectivity_plus: ^6.0.3
+  device_info_plus: ^10.1.0
+  package_info_plus: ^8.0.0
 
-  # Device Features - Compatible with Appwrite 17.0.0
-  vibration: ^3.1.3
-  device_info_plus: ^10.1.2
-  package_info_plus: ^8.3.0
+  # Notifications & Permissions
+  flutter_local_notifications: ^17.1.2
+  url_launcher: ^6.2.6
 
-  # Permissions
-  permission_handler: ^12.0.1
-  flutter_riverpod: ^2.6.1
-  dartz: ^0.10.1
+  # Biometrics & Security
+  local_auth: ^2.1.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # Linting & Code Quality
-  flutter_lints: ^6.0.0
-
-  # Code Generation - Compatible versions
-  build_runner: ^2.4.8
-  json_serializable: ^6.8.0
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.10
   hive_generator: ^2.0.1
-
-  # Testing - Compatible versions
-  mockito: ^5.4.4
-  bloc_test: ^9.1.7
 
 flutter:
   uses-material-design: true
@@ -76,3 +77,15 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/animations/
+    - .env
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700

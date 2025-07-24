@@ -49,8 +49,8 @@ class AppwriteService {
   /// Verifica si el usuario está autenticado
   Future<bool> isUserAuthenticated() async {
     try {
-      await _account.get();
-      return true;
+      final user = await _account.get();
+      return user.$id.isNotEmpty;
     } catch (e) {
       return false;
     }
@@ -63,6 +63,35 @@ class AppwriteService {
     } catch (e) {
       print('Error obteniendo usuario actual: $e');
       return null;
+    }
+  }
+
+  /// Prueba la conectividad con Appwrite
+  Future<bool> testConnection() async {
+    try {
+      if (kDebugMode) {
+        print('🔍 Probando conexión con Appwrite...');
+        print('🌐 Endpoint: ${AppwriteConstants.endpoint}');
+        print('🎯 Project ID: ${AppwriteConstants.projectId}');
+      }
+
+      // Intentar obtener información del proyecto
+      await _account.get();
+
+      if (kDebugMode) {
+        print('✅ Conexión exitosa con Appwrite');
+      }
+      return true;
+    } on AppwriteException catch (e) {
+      if (kDebugMode) {
+        print('❌ Error de Appwrite: ${e.message} (Código: ${e.code})');
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error de conexión: $e');
+      }
+      return false;
     }
   }
 

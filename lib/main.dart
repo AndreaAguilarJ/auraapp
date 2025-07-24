@@ -9,6 +9,8 @@ import 'shared/providers/app_provider.dart';
 import 'shared/providers/auth_provider.dart';
 import 'shared/providers/mood_compass_provider.dart';
 import 'shared/providers/activity_provider.dart';
+import 'shared/providers/guided_conversation_provider.dart';
+import 'shared/providers/conversation_invitation_provider.dart';
 import 'shared/theme/app_theme.dart';
 import 'features/auth/presentation/screens/auth_screen.dart';
 import 'features/navigation/presentation/screens/main_navigation_screen.dart';
@@ -21,7 +23,7 @@ void main() async {
   
   // Inicializar servicios
   await AppwriteService.instance.initialize();
-  await NotificationService.instance.initialize();
+  await NotificationService().initialize(); // Usar nueva implementación
   await RealtimeSyncService.instance.initialize();
 
   runApp(const AuraApp());
@@ -41,6 +43,20 @@ class AuraApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => ActivityProvider()),
         ChangeNotifierProvider(
           create: (context) => MoodCompassProvider()..initialize(),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, GuidedConversationProvider>(
+          create: (context) => GuidedConversationProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+          ),
+          update: (context, auth, previous) =>
+            previous ?? GuidedConversationProvider(auth),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, ConversationInvitationProvider>(
+          create: (context) => ConversationInvitationProvider(
+            Provider.of<AuthProvider>(context, listen: false),
+          ),
+          update: (context, auth, previous) =>
+            previous ?? ConversationInvitationProvider(auth),
         ),
       ],
       child: MaterialApp(
